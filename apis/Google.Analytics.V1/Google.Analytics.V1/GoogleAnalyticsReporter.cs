@@ -48,13 +48,17 @@ namespace Google.Analytics.V1
         private const string AppNameParam = "an";
         private const string AppVersionParam = "av";
         private const string ScreenNameParam = "cd";
+        private const string DocumentTitleParam = "dt";
+        private const string DocumentPathParam = "dp";
 
         private const string VersionValue = "1";
         private const string EventTypeValue = "event";
+        private const string PageViewValue = "pageView";
         private const string SessionStartValue = "start";
         private const string SessionEndValue = "end";
         private const string ScreenViewValue = "screenview";
 
+        private readonly Lazy<HttpClient> _httpClient;
         private readonly bool _debug;
         private readonly string _serverUrl;
         private readonly Dictionary<string, string> _baseHitData;
@@ -106,6 +110,7 @@ namespace Google.Analytics.V1
             _serverUrl = debug ? DebugServerUrl : ProductionServerUrl;
             _baseHitData = MakeBaseHitData();
             _userAgent = userAgent;
+            _httpClient = new Lazy<HttpClient>(CreateHttpClient);
         }
 
         /// <summary>
@@ -135,6 +140,27 @@ namespace Google.Analytics.V1
             if (value != null)
             {
                 hitData[EventValueParam] = value.ToString();
+            }
+            SendHitData(hitData);
+        }
+
+        public void ReportPageView(string page, string title, Dictionary<int, string> customDimensions = null)
+        {
+            Preconditions.CheckNotNull(page, nameof(page));
+            Preconditions.CheckNotNull(title, nameof(title));
+
+            var hitData = new Dictionary<string, string>(_baseHitData)
+            {
+                { HitTypeParam, PageViewValue },
+                { DocumentPathParam, page },
+                { DocumentTitleParam, title },
+            };
+            if (customDimensions != null)
+            {
+                foreach (var entry in customDimensions)
+                {
+                    hitData[GetCustomDimension(entry.Key)] = entry.Value;
+                }
             }
             SendHitData(hitData);
         }
@@ -208,17 +234,11 @@ namespace Google.Analytics.V1
         /// <param name="hitData">The hit data to be sent.</param>
         private async void SendHitData(Dictionary<string, string> hitData)
         {
-            using (var client = new HttpClient())
+            var client = _httpClient.Value;
+            using (var form = new FormUrlEncodedContent(hitData))
+            using (var response = await client.PostAsync(_serverUrl, form).ConfigureAwait(false))
             {
-                if (_userAgent != null)
-                {
-                    client.DefaultRequestHeaders.UserAgent.ParseAdd(_userAgent);
-                }
-                using (var form = new FormUrlEncodedContent(hitData))
-                using (var response = await client.PostAsync(_serverUrl, form).ConfigureAwait(false))
-                {
-                    DebugPrintAnalyticsOutput(response.Content.ReadAsStringAsync());
-                }
+                DebugPrintAnalyticsOutput(response.Content.ReadAsStringAsync());
             }
         }
 
@@ -232,5 +252,17 @@ namespace Google.Analytics.V1
             var result = await resultTask.ConfigureAwait(false);
             Debug.WriteLine($"Output of analytics: {result}");
         }
+
+        private HttpClient CreateHttpClient()
+        {
+            var result = new HttpClient();
+            if (_userAgent != null)
+            {
+                result.DefaultRequestHeaders.UserAgent.ParseAdd(_userAgent);
+            }
+            return result;
+        }
+
+        private static string GetCustomDimension(int index) => "cd{index}";
     }
 }
