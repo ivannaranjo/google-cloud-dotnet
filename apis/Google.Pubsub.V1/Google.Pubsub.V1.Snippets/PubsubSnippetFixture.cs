@@ -23,9 +23,7 @@ namespace Google.Pubsub.V1.Snippets
 {
     /// <summary>
     /// Fixture which is set up at the start of the test run, and torn down at the end.
-    /// This creates a new bucket which can be used in all snippets. The bucket is deleted
-    /// at the end of the test. The Google Cloud Project name is fetched from the TEST_PROJECT
-    /// environment variable.
+    /// Topics and subscriptions are created with specific prefixes, and deleted in tear-down.
     /// </summary>
     [CollectionDefinition(nameof(PubsubSnippetFixture))]
     public sealed class PubsubSnippetFixture : IDisposable, ICollectionFixture<PubsubSnippetFixture>

@@ -1,0 +1,34 @@
+﻿{
+  "version": "0.2.0-*",
+  "description": "Recommended Google client library to access the Google Cloud Speech API, which performs speech recognition.",
+  "authors": [ "Google Inc." ],
+
+  "packOptions": {
+    "summary": "Recommended Google client library to access the Google Cloud Speech API.",
+    "owners": [ "google-cloud" ],
+    "tags": [ "Google", "Cloud", "Speech" ],
+    "iconUrl": "https://cloud.google.com/images/gcp-icon-64x64.png",
+    "projectUrl": "https://github.com/GoogleCloudPlatform/google-cloud-dotnet",
+    "licenseUrl": "http://www.apache.org/licenses/LICENSE-2.0",
+    "requireLicenseAcceptance": false
+  },
+
+  "buildOptions": {
+    "keyFile": "../../GoogleApis.snk"
+  },
+
+  "dependencies": {
+    "Google.Api.CommonProtos": "1.0.0-beta02",
+    "Google.Api.Gax": "1.0.0-beta02",
+    "Google.Apis.Auth": "1.16.0",
+    "Google.Protobuf": "3.0.0",
+    "Grpc.Auth": "1.0.0",
+    "Grpc.Core": "1.0.0",
+    "System.Interactive.Async": "3.0.0",
+    "System.Net.Http": "4.0.0"
+  },
+
+  "frameworks": {
+    "net45": { }
+  }
+}
