@@ -14,9 +14,9 @@ namespace Google.Analytics.V1
     {
         private const int ProjectIdHashIndex = 11;
 
-        private readonly AnalyticsReporter _reporter;
+        private readonly IAnalyticsReporter _reporter;
 
-        public EventsReporter(AnalyticsReporter reporter)
+        public EventsReporter(IAnalyticsReporter reporter)
         {
             _reporter = Preconditions.CheckNotNull(reporter, nameof(reporter));
         }
@@ -25,7 +25,6 @@ namespace Google.Analytics.V1
             string eventType,
             string eventName,
             string projectId = null,
-            DateTime? timestamp = null,
             Dictionary<string, string> metadata = null)
         {
             Preconditions.CheckNotNull(eventType, nameof(eventType));
@@ -38,7 +37,6 @@ namespace Google.Analytics.V1
                 {
                     { ProjectIdHashIndex, GetProjectHash(projectId) }
                 });
-
         }
 
         private static string GetProjectHash(string projectId)

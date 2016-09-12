@@ -31,11 +31,8 @@ namespace Google.Analytics.V1
     /// https://developers.google.com/analytics/devguides/collection/protocol/v1/
     /// </para>
     /// </summary>
-    public class AnalyticsReporter
+    public class AnalyticsReporter : IAnalyticsReporter
     {
-        private const string ProductionServerUrl = "https://ssl.google-analytics.com/collect";
-        private const string DebugServerUrl = "https://ssl.google-analytics.com/debug/collect";
-
         private const string HitTypeParam = "t";
         private const string VersionParam = "v";
         private const string EventCategoryParam = "ec";
@@ -58,11 +55,8 @@ namespace Google.Analytics.V1
         private const string SessionEndValue = "end";
         private const string ScreenViewValue = "screenview";
 
-        private readonly Lazy<HttpClient> _httpClient;
-        private readonly bool _debug;
-        private readonly string _serverUrl;
         private readonly Dictionary<string, string> _baseHitData;
-        private readonly string _userAgent;
+        private readonly IHitSender _hitSender;
 
         /// <summary>
         /// The name of the application to use when reporting data.
@@ -99,18 +93,16 @@ namespace Google.Analytics.V1
             string clientId = null,
             string appVersion = null,
             bool debug = false,
-            string userAgent = null)
+            string userAgent = null,
+            IHitSender sender = null)
         {
             PropertyId = Preconditions.CheckNotNull(propertyId, nameof(propertyId));
             ApplicationName = Preconditions.CheckNotNull(appName, nameof(appName));
             ClientId = clientId ?? Guid.NewGuid().ToString();
             ApplicationVersion = appVersion;
 
-            _debug = debug;
-            _serverUrl = debug ? DebugServerUrl : ProductionServerUrl;
             _baseHitData = MakeBaseHitData();
-            _userAgent = userAgent;
-            _httpClient = new Lazy<HttpClient>(CreateHttpClient);
+            _hitSender = sender ?? new HitSender(debug, userAgent);
         }
 
         /// <summary>
@@ -141,7 +133,7 @@ namespace Google.Analytics.V1
             {
                 hitData[EventValueParam] = value.ToString();
             }
-            SendHitData(hitData);
+            _hitSender.SendHitData(hitData);
         }
 
         public void ReportPageView(string page, string title, Dictionary<int, string> customDimensions = null)
@@ -162,7 +154,7 @@ namespace Google.Analytics.V1
                     hitData[GetCustomDimension(entry.Key)] = entry.Value;
                 }
             }
-            SendHitData(hitData);
+            _hitSender.SendHitData(hitData);
         }
 
         /// <summary>
@@ -178,7 +170,7 @@ namespace Google.Analytics.V1
                 { HitTypeParam, ScreenViewValue },
                 { ScreenNameParam, name },
             };
-            SendHitData(hitData);
+            _hitSender.SendHitData(hitData);
         }
 
         /// <summary>
@@ -191,7 +183,7 @@ namespace Google.Analytics.V1
                 { HitTypeParam,EventTypeValue },
                 { SessionControlParam, SessionStartValue }
             };
-            SendHitData(hitData);
+            _hitSender.SendHitData(hitData);
         }
 
         /// <summary>
@@ -204,7 +196,7 @@ namespace Google.Analytics.V1
                 { HitTypeParam, EventTypeValue },
                 { SessionControlParam, SessionEndValue }
             };
-            SendHitData(hitData);
+            _hitSender.SendHitData(hitData);
         }
 
         /// <summary>
@@ -224,41 +216,6 @@ namespace Google.Analytics.V1
             if (ApplicationVersion != null)
             {
                 result.Add(AppVersionParam, ApplicationVersion);
-            }
-            return result;
-        }
-
-        /// <summary>
-        /// Sends the hit data to the server.
-        /// </summary>
-        /// <param name="hitData">The hit data to be sent.</param>
-        private async void SendHitData(Dictionary<string, string> hitData)
-        {
-            var client = _httpClient.Value;
-            using (var form = new FormUrlEncodedContent(hitData))
-            using (var response = await client.PostAsync(_serverUrl, form).ConfigureAwait(false))
-            {
-                DebugPrintAnalyticsOutput(response.Content.ReadAsStringAsync());
-            }
-        }
-
-        /// <summary>
-        /// Debugging utility that will print out to the output window the result of the hit request.
-        /// </summary>
-        /// <param name="resultTask">The task resulting from the request.</param>
-        [Conditional("DEBUG")]
-        private async void DebugPrintAnalyticsOutput(Task<string> resultTask)
-        {
-            var result = await resultTask.ConfigureAwait(false);
-            Debug.WriteLine($"Output of analytics: {result}");
-        }
-
-        private HttpClient CreateHttpClient()
-        {
-            var result = new HttpClient();
-            if (_userAgent != null)
-            {
-                result.DefaultRequestHeaders.UserAgent.ParseAdd(_userAgent);
             }
             return result;
         }
